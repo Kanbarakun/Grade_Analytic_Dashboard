@@ -1,15 +1,18 @@
-#include <iostream>
-#include <iomanip>
-#include <vector>
-#include <string>
-#include <algorithm>
-#include <ctime>
-#include <sstream>
-#include <stdexcept>
-#include <limits>
-#include <cctype>
+                                               // GROUP 1 // 1ST YEAR PROJECT // GRADE_ANALYTIC_DASHBOARD //
+
+#include <iostream>          // For standard input/output streams
+#include <iomanip>           // For I/O manipulators (e.g., setw, setprecision)
+#include <vector>            // For using the vector container
+#include <string>            // For string operations
+#include <algorithm>         // For algorithms like transform, min_element, etc.
+#include <ctime>             // For date/time functions
+#include <sstream>           // For string stream operations
+#include <stdexcept>         // For standard exception classes
+#include <limits>            // For numeric limits (e.g., max() for input validation)
+#include <cctype>            // For character handling (e.g., isalpha, isspace)
 
 // MySQL Connector/C++ 9.x JDBC headers
+// These headers are required for connecting and interacting with MySQL database
 #include <jdbc/mysql_connection.h>
 #include <jdbc/mysql_driver.h>
 #include <jdbc/cppconn/driver.h>
@@ -44,6 +47,7 @@ struct Student {
     Student() = default;
 };
 
+// Returns the current date and time as a timestamp string (format: YYYY-MM-DD HH:MM:SS)
 string getCurrentTimestamp() {
     time_t now = time(nullptr);
     tm local_tm;
@@ -57,18 +61,21 @@ string getCurrentTimestamp() {
     return string(buffer);
 }
 
+// Returns remarks string based on a numeric average grade
 string calculateRemarks(double grade) {
     if (grade >= 90) return "Excellent";
     if (grade >= 75) return "Good";
     return "Needs Improvement";
 }
 
+// Converts a string to all lowercase letters
 string tolowercase(const string& str) {
     string lowstr = str;
     transform(lowstr.begin(), lowstr.end(), lowstr.begin(), ::tolower);
     return lowstr;
 }
 
+// Validates if the given name contains only alphabetic characters and spaces
 bool isValidName(const string& name) {
     if (name.empty()) return false;
     for (char c : name) {
@@ -79,21 +86,36 @@ bool isValidName(const string& name) {
     return true;
 }
 
+// Prompts user for a valid integer and keeps asking until the input is correct
+// Returns only an integer value, rejects decimals and non-integers
 int ValidInput(const string& prompt) {
+    string input;
     int value;
     while (true) {
         cout << prompt;
-        cin >> value;
-        if (!cin.fail()) break;
-        cin.clear();
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
-        cout << "Invalid! Please enter a number.\n";
+        getline(cin, input);
+
+        // Check if input contains a decimal point
+        if (input.find('.') != string::npos) {
+            cout << "Invalid! Please enter a whole number (no decimals).\n";
+            continue;
+        }
+
+        // Check if input is all digits (and not empty)
+        bool isNumber = !input.empty() && all_of(input.begin(), input.end(), ::isdigit);
+
+        if (isNumber) {
+            value = stoi(input);
+            break;
+        }
+        else {
+            cout << "Invalid! Please enter a valid number.\n";
+        }
     }
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
     return value;
 }
 
-// Now allows decimals
+// Prompts user for a valid grade (double in range 0 to 100) and keeps asking until valid
 double ValidGrade(const string& subject) {
     double grade;
     while (true) {
@@ -117,9 +139,11 @@ struct DatabaseConfig {
     string database = "grades_dashboard";
 };
 
+// Global pointers for the MySQL driver and connection
 sql::mysql::MySQL_Driver* driver = nullptr;
 unique_ptr<sql::Connection> con;
 
+// Tries to connect to a MySQL server using the given config; returns true if successful
 bool testConnection(const DatabaseConfig& config) {
     try {
         string connectionString = "tcp://" + config.host + ":" + to_string(config.port);
@@ -136,6 +160,7 @@ bool testConnection(const DatabaseConfig& config) {
     }
 }
 
+// Attempts all known connection configs until one works, connects and creates table if needed
 static void connectDB() {
     cout << "\n=== ATTEMPTING DATABASE CONNECTION ===" << endl;
 
@@ -207,6 +232,7 @@ static void connectDB() {
     }
 }
 
+// Closes the MySQL database connection if open
 void disconnectDB() {
     if (con) {
         con.reset();
@@ -215,7 +241,7 @@ void disconnectDB() {
 }
 
 // CRUD Functions
-
+// Prompts for student info and adds a new student record to the database
 void addStudent() {
     Student s;
     cout << "\n=== ADD NEW STUDENT ===" << endl;
@@ -260,6 +286,7 @@ void addStudent() {
     }
 }
 
+// Displays all students in the database with their details
 void viewStudents() {
     try {
         unique_ptr<sql::Statement> stmt(con->createStatement());
@@ -302,6 +329,7 @@ void viewStudents() {
     }
 }
 
+// Prompts for a student name, then displays all matching students
 void searchStudent() {
     string searchName;
     cout << "\n=== SEARCH STUDENT ===" << endl;
@@ -358,6 +386,7 @@ void searchStudent() {
     }
 }
 
+// Prompts for a section name, then displays all students in that section
 void searchSection() {
     string searchSection;
     cout << "\n=== SEARCH BY SECTION ===" << endl;
@@ -408,6 +437,7 @@ void searchSection() {
     }
 }
 
+// Prompts for a student name, displays current info, then allows updating of the record
 void updateStudent() {
     string name;
     cout << "\n=== UPDATE STUDENT ===" << endl;
@@ -481,6 +511,7 @@ void updateStudent() {
     }
 }
 
+// Prompts for a student name, displays info, asks for confirmation, and deletes the record if confirmed
 void deleteStudent() {
     string name;
     cout << "\n=== DELETE STUDENT ===" << endl;
@@ -536,6 +567,7 @@ void deleteStudent() {
     }
 }
 
+// Calculates the mean (average) of a vector of grades
 double calculateMean(const vector<double>& grades) {
     if (grades.empty()) return 0;
     double sum = 0;
@@ -543,16 +575,19 @@ double calculateMean(const vector<double>& grades) {
     return sum / grades.size();
 }
 
+// Finds the maximum value in a vector of grades
 double findMax(const vector<double>& grades) {
     if (grades.empty()) return 0;
     return *max_element(grades.begin(), grades.end());
 }
 
+// Finds the minimum value in a vector of grades
 double findMin(const vector<double>& grades) {
     if (grades.empty()) return 0;
     return *min_element(grades.begin(), grades.end());
 }
 
+// Displays analytics for all students: highest, lowest, average per subject, and performance distribution
 void displayAnalytics() {
     try {
         unique_ptr<sql::Statement> stmt(con->createStatement());
@@ -628,6 +663,7 @@ void displayAnalytics() {
     }
 }
 
+// Main menu loop: connects to DB, displays menu, dispatches to functions, and closes DB on exit
 int main() {
     cout << "=== GRADE ANALYTICS DASHBOARD ===" << endl;
     cout << "Initializing database connection..." << endl;
